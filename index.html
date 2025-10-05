@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Skin Finder — 10kacc | Thumbnails & Filter</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1: #e6f0ff;
+    --bg2: #d8ecff;
+    --accent1: #3b82f6;
+    --accent2: #06b6d4;
+    --card:#ffffff;
+    --muted:#5b6b80;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Inter,system-ui,Segoe UI,Roboto,Arial;
+    background: linear-gradient(135deg, var(--bg1), var(--bg2));
+    color:#0b1220;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1200px;margin:26px auto;padding:18px;}
+  header{display:flex;align-items:center;gap:16px;margin-bottom:16px}
+  .logo{
+    width:56px;height:56px;border-radius:12px;
+    background:linear-gradient(135deg,var(--accent1),var(--accent2));
+    display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:20px;box-shadow:0 8px 30px rgba(59,130,246,0.18);
+  }
+  h1{font-size:20px;margin:0}
+  p.lead{margin:0;color:var(--muted);font-size:13px}
+
+  .grid{
+    display:grid;
+    grid-template-columns:320px 1fr;
+    gap:16px;
+    align-items:start;
+  }
+
+  /* left panel */
+  .panel{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 30px rgba(16,24,40,0.06)}
+  .controls{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+  input[type=text], .search{
+    width:100%;padding:10px 12px;border-radius:10px;border:1px solid #e6eef8;background:#fbfdff;
+    font-size:14px;color:#06203a;
+  }
+  button{background:linear-gradient(90deg,var(--accent1),var(--accent2));color:white;border:0;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+  button.ghost{background:transparent;border:1px solid #e6eef8;color:var(--muted);padding:8px 10px}
+  .muted{color:var(--muted);font-size:13px}
+
+  .skinGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;max-height:640px;overflow:auto;padding:6px;margin-top:8px}
+  .skinCard{
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    padding:8px;border-radius:10px;background:linear-gradient(180deg,#fff,#f7fbff);cursor:pointer;
+    border:1px solid rgba(15,23,42,0.03);
+    transition:transform .12s,box-shadow .12s;
+  }
+  .skinCard:hover{transform:translateY(-6px);box-shadow:0 10px 30px rgba(3,102,214,0.12)}
+  .thumb{
+    width:100%;height:86px;border-radius:8px;overflow:hidden;background:#f3f6fb;display:flex;align-items:center;justify-content:center;
+    border:1px solid #eef6ff;
+  }
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .skinName{font-size:13px;text-align:center;color:#06314a;padding:4px 6px}
+
+  /* right panel */
+  .rightPanel{background:var(--card);padding:12px;border-radius:12px;box-shadow:0 6px 30px rgba(16,24,40,0.06);display:flex;flex-direction:column;height:760px}
+  .rightTop{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+  .badge{background:linear-gradient(90deg,var(--accent2),var(--accent1));color:white;padding:6px 10px;border-radius:999px;font-weight:700}
+  .resultCount{color:var(--muted);font-size:14px}
+  .tableWrap{flex:1;overflow:auto;border-radius:8px;border:1px solid #eef6ff;padding:8px;background:#fbfeff}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px;border-bottom:1px solid #f1f6fb;text-align:left;vertical-align:top}
+  th{position:sticky;top:0;background:linear-gradient(180deg,#f8fbff,#fbfeff);z-index:2}
+  tr:hover td{background:linear-gradient(90deg,#ffffff,#fcfdff)}
+  .accountLine{font-family:monospace;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:720px}
+
+  .footerBar{display:flex;gap:8px;align-items:center;margin-top:10px}
+
+  /* responsive */
+  @media (max-width:980px){
+    .grid{grid-template-columns:1fr; }
+    .skinGrid{grid-template-columns:repeat(3,1fr)}
+    .rightPanel{height:640px}
+  }
+  @media (max-width:520px){
+    .skinGrid{grid-template-columns:repeat(2,1fr)}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">SK</div>
+    <div>
+      <h1>Skin Finder — 10kacc</h1>
+      <p class="lead">Chọn skin để xem danh sách tài khoản chứa skin đó — có ảnh preview nếu FileId chứa url.</p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: skins -->
+    <div class="panel">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+        <input id="inputUrlAcc" type="text" value="https://raw.githubusercontent.com/HoshinoKotaSouma/Maje/refs/heads/main/10kacc.txt" />
+        <button id="btnLoad" title="Tải 10k acc">Load</button>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <input id="inputFileId" type="text" value="https://raw.githubusercontent.com/HoshinoKotaSouma/ctvhogo/main/FileIdtuong.json" />
+        <button id="btnLoadFileId" class="ghost" title="Tải FileId">Load FileId</button>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+        <input id="searchSkin" class="search" placeholder="Tìm skin..." />
+        <button id="btnClearCache" class="ghost">Xóa cache</button>
+      </div>
+
+      <div class="muted">Tổng skin: <span id="totalSkins">0</span> — Tổng acc: <span id="totalAcc">0</span></div>
+
+      <div id="skinGrid" class="skinGrid" style="margin-top:10px">
+        <!-- thumbnails injected here -->
+      </div>
+    </div>
+
+    <!-- RIGHT: results -->
+    <div class="rightPanel">
+      <div class="rightTop">
+        <div style="display:flex;flex-direction:column">
+          <div style="display:flex;gap:8px;align-items:center">
+            <div id="selSkinBadge" class="badge">—</div>
+            <div style="display:flex;flex-direction:column">
+              <div id="selSkinName" style="font-weight:700">Chưa chọn skin</div>
+              <div class="muted" id="selSkinMeta">Chọn 1 skin để xem acc</div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+          <div class="resultCount" id="resultCount">0 tài khoản</div>
+          <button id="btnDownloadList">Tải danh sách</button>
+        </div>
+      </div>
+
+      <div class="tableWrap">
+        <table id="resultTable">
+          <thead>
+            <tr><th style="width:80px">#</th><th>Account (full)</th></tr>
+          </thead>
+          <tbody id="resultBody"></tbody>
+        </table>
+      </div>
+
+      <div class="footerBar">
+        <div class="muted">Dữ liệu được lưu cache trong localStorage để dùng offline — lần đầu tải cần mạng.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(async ()=>{
+
+/* ----------------- config ----------------- */
+const defaultAccUrl = document.getElementById('inputUrlAcc').value.trim();
+const defaultFileIdUrl = document.getElementById('inputFileId').value.trim();
+const ACC_CACHE_KEY = 'skinfinder_acc_txt_v1';
+const FILEID_CACHE_KEY = 'skinfinder_fileid_v1';
+const SKIN_INDEX_KEY = 'skinfinder_index_v1';
+
+/* ----------------- helpers ----------------- */
+const $ = id => document.getElementById(id);
+function log(msg){ console.log(msg); }
+function githubBlobToRaw(u){
+  if(!u) return u;
+  if(u.includes('raw.githubusercontent.com')) return u;
+  return u.replace('https://github.com/','https://raw.githubusercontent.com/').replace('/blob/','/');
+}
+async function fetchText(url){
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('Fetch lỗi ' + r.status);
+  return r.text();
+}
+async function fetchJson(url){
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('Fetch lỗi ' + r.status);
+  return r.json();
+}
+function makeSafeFilename(name){
+  return name.replace(/[\\\/:*?"<>|]+/g,'_').replace(/\s+/g,'_').substring(0,120);
+}
+function saveToFile(filename, text){
+  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+  URL.revokeObjectURL(url); a.remove();
+}
+
+/* ----------------- parse utilities ----------------- */
+function splitAccountsFromText(txt){
+  const lines = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  // simple heuristic: each non-empty line is an account
+  return lines;
+}
+function parseAccForSkins(line){
+  // find bracket groups like [A, B, C]
+  const res = [];
+  const re = /\[([^\]]+)\]/g;
+  let m;
+  while((m = re.exec(line)) !== null){
+    const inside = m[1];
+    inside.split(',').map(s=>s.trim()).filter(Boolean).forEach(s=>res.push(s));
+  }
+  return res;
+}
+
+/* ----------------- UI refs ----------------- */
+const skinGrid = $('skinGrid');
+const searchSkin = $('searchSkin');
+const totalSkins = $('totalSkins');
+const totalAcc = $('totalAcc');
+const selSkinBadge = $('selSkinBadge');
+const selSkinName = $('selSkinName');
+const selSkinMeta = $('selSkinMeta');
+const resultCount = $('resultCount');
+const resultBody = $('resultBody');
+const btnLoad = $('btnLoad');
+const btnLoadFileId = $('btnLoadFileId');
+const btnClearCache = $('btnClearCache');
+const btnDownloadList = $('btnDownloadList');
+const inputFileId = $('inputFileId');
+const inputUrlAcc = $('inputUrlAcc');
+
+/* ----------------- data stores ----------------- */
+let accTextRaw = '';
+let accounts = []; // array of lines
+let fileIdMap = {}; // skin -> url
+let skinIndex = {}; // skin -> [accountLines]
+
+/* ----------------- main flow ----------------- */
+async function loadFileId(url){
+  const raw = githubBlobToRaw(url);
+  try{
+    const j = await fetchJson(raw);
+    // build map
+    fileIdMap = {};
+    if(Array.isArray(j)){
+      for(const it of j){
+        const name = (it.skin||'').trim();
+        let u = it.url || it.raw || '';
+        if(u) u = githubBlobToRaw(u);
+        if(name) fileIdMap[name] = u;
+      }
+    } else if(typeof j === 'object'){
+      for(const k of Object.keys(j)){
+        let v = j[k];
+        if(typeof v === 'string') v = githubBlobToRaw(v);
+        fileIdMap[k] = v;
+      }
+    }
+    // cache
+    localStorage.setItem(FILEID_CACHE_KEY, JSON.stringify({ts:Date.now(), url:raw, data:fileIdMap}));
+    console.info('FileId loaded, entries:', Object.keys(fileIdMap).length);
+    return fileIdMap;
+  }catch(err){
+    console.error(err);
+    alert('Không tải được FileId: ' + err.message);
+    throw err;
+  }
+}
+
+async function loadAccs(url){
+  const raw = githubBlobToRaw(url);
+  try{
+    const txt = await fetchText(raw);
+    accTextRaw = txt;
+    accounts = splitAccountsFromText(txt);
+    // cache trimmed to localStorage (if size too big, avoid storing very large)
+    try{
+      localStorage.setItem(ACC_CACHE_KEY, JSON.stringify({ts:Date.now(), url:raw, data:txt}));
+    }catch(e){
+      console.warn('Không lưu cache acc (kích thước lớn).');
+    }
+    console.info('Loaded accounts:', accounts.length);
+    return accounts;
+  }catch(err){
+    console.error(err);
+    alert('Không tải được 10kacc: ' + err.message);
+    throw err;
+  }
+}
+
+function buildIndex(){
+  skinIndex = {};
+  for(const line of accounts){
+    const skins = parseAccForSkins(line);
+    for(const s of skins){
+      if(!s) continue;
+      if(!skinIndex[s]) skinIndex[s] = [];
+      skinIndex[s].push(line);
+    }
+  }
+  // cache index keys small enough
+  localStorage.setItem(SKIN_INDEX_KEY, JSON.stringify({ts:Date.now(), keys:Object.keys(skinIndex).length}));
+  console.info('Built skin index, skins:', Object.keys(skinIndex).length);
+}
+
+function renderSkinGrid(filter=''){
+  skinGrid.innerHTML = '';
+  const allSkins = Object.keys(skinIndex).sort((a,b)=>a.localeCompare(b,'vi'));
+  const filtered = filter ? allSkins.filter(s=>s.toLowerCase().includes(filter.toLowerCase())) : allSkins;
+  totalSkins.innerText = filtered.length;
+  totalAcc.innerText = accounts.length;
+  for(const s of filtered){
+    const card = document.createElement('div'); card.className='skinCard';
+    const thumb = document.createElement('div'); thumb.className='thumb';
+    // thumbnail: try fileIdMap[s]
+    const url = fileIdMap[s];
+    if(url){
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = s;
+      img.onerror = ()=>{ thumb.innerText = s; thumb.style.padding='8px'; thumb.style.fontSize='13px'; thumb.style.color='#0b2334'; thumb.style.textAlign='center' }
+      thumb.appendChild(img);
+    } else {
+      const t = document.createElement('div'); t.style.padding='6px'; t.style.fontSize='13px'; t.style.color='#073048'; t.style.textAlign='center';
+      t.innerText = s;
+      thumb.appendChild(t);
+    }
+    const nameDiv = document.createElement('div'); nameDiv.className='skinName';
+    nameDiv.innerText = s;
+    card.appendChild(thumb); card.appendChild(nameDiv);
+    card.addEventListener('click', ()=> onSelectSkin(s));
+    skinGrid.appendChild(card);
+  }
+}
+
+function onSelectSkin(skinName){
+  const list = skinIndex[skinName] || [];
+  selSkinBadge.innerText = list.length;
+  selSkinName.innerText = skinName;
+  selSkinMeta.innerText = `${list.length} tài khoản chứa skin này`;
+  resultCount.innerText = `${list.length} tài khoản`;
+  renderResults(list);
+}
+
+function renderResults(list){
+  resultBody.innerHTML = '';
+  if(!list || list.length===0) return;
+  // show rows
+  for(let i=0;i<list.length;i++){
+    const tr = document.createElement('tr');
+    const td1 = document.createElement('td'); td1.innerText = i+1;
+    const td2 = document.createElement('td');
+    const pre = document.createElement('div'); pre.className='accountLine'; pre.title = list[i];
+    pre.innerText = list[i];
+    td2.appendChild(pre);
+    tr.appendChild(td1); tr.appendChild(td2);
+    resultBody.appendChild(tr);
+  }
+}
+
+/* ----------------- events ----------------- */
+btnLoad.addEventListener('click', async ()=>{
+  try{
+    btnLoad.disabled = true; btnLoad.innerText = 'Đang tải...';
+    const url = inputUrlAcc.value.trim() || defaultAccUrl;
+    await loadAccs(url);
+    // load fileId if cached else leave empty
+    const cachedFileId = localStorage.getItem(FILEID_CACHE_KEY);
+    if(cachedFileId){
+      try{
+        const parsed = JSON.parse(cachedFileId);
+        fileIdMap = parsed.data || {};
+      }catch(e){}
+    }
+    buildIndex();
+    renderSkinGrid();
+    btnLoad.innerText = 'Load';
+    btnLoad.disabled = false;
+    alert('Đã tải xong accounts và build index.');
+  }catch(err){
+    btnLoad.disabled = false; btnLoad.innerText = 'Load';
+  }
+});
+
+btnLoadFileId.addEventListener('click', async ()=>{
+  try{
+    btnLoadFileId.disabled = true; btnLoadFileId.innerText = 'Đang tải...';
+    await loadFileId(inputFileId.value.trim() || defaultFileIdUrl);
+    renderSkinGrid(searchSkin.value.trim());
+    btnLoadFileId.disabled = false; btnLoadFileId.innerText = 'Load FileId';
+    alert('Loaded FileId.');
+  }catch(err){
+    btnLoadFileId.disabled = false; btnLoadFileId.innerText = 'Load FileId';
+  }
+});
+
+searchSkin.addEventListener('input', ()=> renderSkinGrid(searchSkin.value.trim()));
+
+btnClearCache.addEventListener('click', ()=>{
+  if(confirm('Xóa cache localStorage?')) {
+    localStorage.removeItem(ACC_CACHE_KEY); localStorage.removeItem(FILEID_CACHE_KEY); localStorage.removeItem(SKIN_INDEX_KEY);
+    alert('Đã xóa cache. Tải lại trang để bắt đầu mới.');
+  }
+});
+
+btnDownloadList.addEventListener('click', ()=>{
+  const skin = selSkinName.innerText;
+  if(!skin || skin==='Chưa chọn skin') return alert('Chưa chọn skin.');
+  const list = skinIndex[skin] || [];
+  if(!list.length) return alert('Không có account nào cho skin này.');
+  const filename = makeSafeFilename(skin) + '.txt';
+  saveToFile(filename, list.join('\\n'));
+});
+
+/* ----------------- try load cache on start ----------------- */
+(function tryLoadCache(){
+  const accc = localStorage.getItem(ACC_CACHE_KEY);
+  if(accc){
+    try{
+      const parsed = JSON.parse(accc);
+      if(parsed && parsed.data){
+        accTextRaw = parsed.data;
+        accounts = splitAccountsFromText(accTextRaw);
+        console.info('Loaded acc from cache:', accounts.length);
+      }
+    }catch(e){}
+  }
+  const filec = localStorage.getItem(FILEID_CACHE_KEY);
+  if(filec){
+    try{
+      const parsed = JSON.parse(filec);
+      if(parsed && parsed.data) fileIdMap = parsed.data;
+      console.info('Loaded FileId from cache:', Object.keys(fileIdMap).length);
+    }catch(e){}
+  }
+  if(accounts.length>0){
+    buildIndex();
+    renderSkinGrid();
+  } else {
+    // auto load remote small timeout
+    // do nothing — user will press Load
+  }
+})();
+
+})(); // IIFE
+</script>
+</body>
+</html>
